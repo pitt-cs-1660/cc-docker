@@ -15,10 +15,11 @@ Your job is to create a Dockerfile for this application that is able to run the 
 | Objectives                       | Points |
 |----------------------------------|--------|
 | based on `node:18-alpine`        | 2      |
-| metadata with label `maintainer` | 2      |
-| working directory `/usr/src/app` | 2      |
+| metadata with label `maintainer` | 1      |
+| working directory `/usr/src/app` | 1      |
 | copy and build the application   | 2      |
 | use an entrypoint to run the app | 2      |
+| push multi-arch image to docker hub | 2    |
 
 ## Pre-requisites
 - docker -->  download it from [here](https://www.docker.com/products/docker-desktop).
