@@ -49,6 +49,7 @@ docker push [YOUR REPO NAME]/cs1660-assignment2:v1
 - please merge you code into the main branch of the project
 - [Create](https://docs.docker.com/docker-hub/quickstart/) a Docker Hub repository called `cs-1660-assignment2`
 - push your image to the repository
+- please submit your docker hub repo name on Canvas it should look like `[dockerhub username/cs-1660-assignment2`
 
 ## Docker login
 Login to docker hub, run the following command in your terminal once you have a Docker Hub account.
