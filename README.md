@@ -6,20 +6,22 @@ Our project is a simple nodeJS application that shows a static HTML page with so
 Your job is to create a Dockerfile for this application that is able to run the server. The following criteria for the image are listed below.
 
 - The image should be based on `node:10-alpine` image. 
-- The application should be available on port `8080` inside the container. 
-- The application should be started with `node ./app.js` command. 
-- The working directory should be `/usr/src/app`. 
-- The application should be copied and built inside the image with `npm install --only=production` command. 
 - The image should have a label `maintainer` with your name as the value.
+- The working directory should be `/usr/src/app`.
+- The application should be available on port `8080` inside the container.
+- The application should be copied and built inside the image with `npm install --only=production` command.
+- The application should be started with `node ./app.js` command.
+- The container image should be built to support amd64 and arm64 architectures and pushed to docker hub.
 
-| Objectives                       | Points |
-|----------------------------------|--------|
-| based on `node:18-alpine`        | 2      |
-| metadata with label `maintainer` | 1      |
-| working directory `/usr/src/app` | 1      |
-| copy and build the application   | 2      |
-| use an entrypoint to run the app | 2      |
-| push multi-arch image to docker hub | 2    |
+| Objectives                                     | Points |
+|------------------------------------------------|--------|
+| based on `node:18-alpine`                      | 2      |
+| metadata with label `maintainer`               | 1      |
+| working directory `/usr/src/app`               | 1      |
+| expose application on port 8080 | 1      |
+| copy and build the application                 | 1      |
+| use an entrypoint to run the app               | 2      |
+| push multi-arch image to docker hub            | 2      |
 
 ## Pre-requisites
 - docker -->  download it from [here](https://www.docker.com/products/docker-desktop).
