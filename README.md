@@ -30,9 +30,26 @@ Your job is to create a Dockerfile for this application that is able to run the 
 
 
 ## Dockerfile Commands
-The only application specific files that need to be copied to the image are `app.js` and `package.json`. You can use `COPY . .` in the Dockerfile but that is unnecessary. The nodeJS app should be installed with the `npm install --only=production`.
+The only application specific files that need to be copied to the image are `app.js`, `package.json`, and the views directory. You can use `COPY . .` in the Dockerfile but that is unnecessary. The nodeJS app should be installed with the `npm install --only=production`.
 
-## Building the image
+## Building an image just for your host
+You can build the image with the following command. 
+
+```bash
+# this will build an image just for your project
+docker build -t [YOUR DOCKER HUB REPO]/cs1660-assignment2:v1 .
+```
+
+## Test the image
+You can verify that the image works by running the following command. Open the browser and go to `http://localhost:8080` to see the application.
+
+If a web page renders submit the assignment on Canvas and Docker Hub.
+
+```bash
+docker run -p 8080:8080 -it --name [YOUR DOCKER HUB REPO]/cs1660-assignment2:v1 --rm app
+```
+
+## Building the cross platform image
 We will need to submit a multi architecture build to docker hub, so we will need to use the `buildx` feature in docker. 
 
 To enable the `buildx` feature, run the following command in your terminal.
