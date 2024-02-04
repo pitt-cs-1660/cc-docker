@@ -5,7 +5,7 @@ Our project is a simple nodeJS application that shows a static HTML page with so
 ## Assignment
 Your job is to create a Dockerfile for this application that is able to run the server. The following criteria for the image are listed below.
 
-- The image should be based on `node:10-alpine` image. 
+- The image should be based on `node:12-alpine` image. 
 - The image should have a label `maintainer` with your name as the value.
 - The working directory should be `/usr/src/app`.
 - The application should be available on port `8080` inside the container.
@@ -58,17 +58,16 @@ To enable the `buildx` feature, run the following command in your terminal.
 # create a new builder instance with arm64 and amd64 platforms
 docker buildx create --use --platform=linux/arm64,linux/amd64 --name multi-platform-builder
 
-# build a multi architecture image
-docker buildx build --platform linux/amd64,linux/arm64 -t [YOUR REPO NAME]/cs1660-assignment2:v1 .
+# build and push multi architecture image
+# the `--push` flag is what pushes our images to Dockerhub
+docker buildx build --platform linux/amd64,linux/arm64 -t [YOUR REPO NAME]/cs1660-assignment2:v1 --push .
 
-# push the image to docker hub
-docker push [YOUR REPO NAME]/cs1660-assignment2:v1
 ```
 ## Submission
 - please merge you code into the main branch of the project
-- [Create](https://docs.docker.com/docker-hub/quickstart/) a Docker Hub repository called `cs-1660-assignment2`
-- push your image to the repository
-- please submit your docker hub repo name on Canvas it should look like `[dockerhub username/cs-1660-assignment2`
+- [Create](https://docs.docker.com/docker-hub/quickstart/) a Docker Hub account with a repository called `cs-1660-assignment2`
+- push your image multi-platform images to the repository
+- please submit your docker hub repo name on Canvas it should look like `[dockerhub username]/cs-1660-assignment2`
 
 ## Docker login
 Login to docker hub, run the following command in your terminal once you have a Docker Hub account.
@@ -79,3 +78,8 @@ docker login --username=[DOCKER HUB LOGIN]
 ```
 
 This will create an entry in your `~/.docker/config.json` file that will store your credentials.
+
+## Resources
+- [docker buildx create](https://docs.docker.com/engine/reference/commandline/buildx_create/)
+- [docker buildx build](https://docs.docker.com/engine/reference/commandline/buildx_build/) 
+
