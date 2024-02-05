@@ -5,7 +5,7 @@ Our project is a simple nodeJS application that shows a static HTML page with so
 ## Assignment
 Your job is to create a Dockerfile for this application that is able to run the server. The following criteria for the image are listed below.
 
-- The image should be based on `node:12-alpine` image. 
+- The image should be based on `node:18-alpine` image. 
 - The image should have a label `maintainer` with your name as the value.
 - The working directory should be `/usr/src/app`.
 - The application should be available on port `8080` inside the container.
@@ -46,7 +46,7 @@ You can verify that the image works by running the following command. Open the b
 If a web page renders submit the assignment on Canvas and Docker Hub.
 
 ```bash
-docker run -p 8080:8080 -it --name [YOUR DOCKER HUB REPO]/cs1660-assignment2:v1 --rm app
+docker run -p 8080:8080 -it --rm --name app [YOUR DOCKER HUB REPO]/cs1660-assignment2:v1
 ```
 
 ## Building the cross platform image
