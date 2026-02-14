@@ -1,55 +1,118 @@
 #!/bin/bash
 
-# Set the base directory to search
-BASE_DIR="$1"
+# usage: ./grade.sh <path-to-student-repo>
 
-# Generate unique image and container names using a timestamp
+BASE_DIR="$1"
+SCORE=0
 TIMESTAMP=$(date +%s)
 IMAGE_NAME="image_$TIMESTAMP"
 CONTAINER_NAME="container_$TIMESTAMP"
+DOCKERFILE="$BASE_DIR/Dockerfile"
 
-# Find the Dockerfile (either at the root or in an app subdirectory)
-DOCKERFILE_PATH=$(find "$BASE_DIR" -type f -name Dockerfile \( -path "$BASE_DIR/Dockerfile" -o -path "$BASE_DIR/app/Dockerfile" \) | head -n 1)
+echo "========================================="
+echo "  docker assignment grading script"
+echo "========================================="
+echo ""
 
-# Check if Dockerfile is found
-if [ -z "$DOCKERFILE_PATH" ]; then
-  echo "No Dockerfile found in $BASE_DIR or $BASE_DIR/app"
+# ---- check dockerfile exists at root ----
+
+if [ ! -f "$DOCKERFILE" ]; then
+  echo "[FAIL] no Dockerfile found at root of project"
+  echo ""
+  echo "final score: 0/10"
   exit 1
 fi
 
-# Change to the root directory of the repository containing the Dockerfile
-REPO_DIR=$(git -C "$DOCKERFILE_PATH" rev-parse --show-toplevel 2>/dev/null || dirname "$DOCKERFILE_PATH")
+echo "[INFO] dockerfile found at project root"
+echo ""
+
+# ---- static dockerfile checks ----
+
+# collect all FROM lines
+FROM_LINES=$(grep -i '^[[:space:]]*FROM' "$DOCKERFILE")
+FROM_COUNT=$(echo "$FROM_LINES" | wc -l)
+FIRST_FROM=$(echo "$FROM_LINES" | head -1)
+LAST_FROM=$(echo "$FROM_LINES" | tail -1)
+
+# check 1: multi-stage build (1 pt)
+echo "--- multi-stage build (1 pt) ---"
+if [ "$FROM_COUNT" -ge 2 ]; then
+  echo "  [PASS] multi-stage build detected ($FROM_COUNT stages)"
+  SCORE=$((SCORE + 1))
+else
+  echo "  [FAIL] not a multi-stage build (only $FROM_COUNT FROM found)"
+fi
+echo ""
+
+# check 2: first stage uses golang:1.23 (1 pt)
+echo "--- build stage uses golang:1.23 (1 pt) ---"
+if echo "$FIRST_FROM" | grep -qi 'golang:1\.23'; then
+  echo "  [PASS] build stage uses golang:1.23"
+  SCORE=$((SCORE + 1))
+else
+  echo "  [FAIL] build stage does not use golang:1.23"
+  echo "  found: $FIRST_FROM"
+fi
+echo ""
+
+# check 3: final stage uses scratch (1 pt)
+echo "--- final stage uses scratch (1 pt) ---"
+if echo "$LAST_FROM" | grep -qi 'scratch'; then
+  echo "  [PASS] final stage is based on scratch"
+  SCORE=$((SCORE + 1))
+else
+  echo "  [FAIL] final stage is not based on scratch"
+  echo "  found: $LAST_FROM"
+fi
+echo ""
+
+# ---- build and runtime checks ----
+
+REPO_DIR=$(git -C "$(dirname "$DOCKERFILE")" rev-parse --show-toplevel 2>/dev/null || dirname "$DOCKERFILE")
 cd "$REPO_DIR" || exit
 
-# Build the Docker image
-echo "Building Docker image from $DOCKERFILE_PATH with name $IMAGE_NAME..."
-docker build -t "$IMAGE_NAME" .
+# check 4: image builds successfully (3 pts)
+echo "--- image builds successfully (3 pts) ---"
+echo "  building image..."
+if docker build -t "$IMAGE_NAME" . > /dev/null 2>&1; then
+  echo "  [PASS] image built successfully"
+  SCORE=$((SCORE + 3))
+else
+  echo "  [FAIL] image failed to build"
+  echo ""
+  echo "========================================="
+  echo "  final score: $SCORE/10"
+  echo "========================================="
+  exit 1
+fi
+echo ""
 
-# Run the Docker container with a unique name
-echo "Running Docker container with name $CONTAINER_NAME..."
-docker run --rm --name "$CONTAINER_NAME" -d -p 5001:5000 "$IMAGE_NAME"
-
-# Give the container a few seconds to start up
+# check 5: container runs and serves http 200 (4 pts)
+echo "--- container runs and responds (4 pts) ---"
+echo "  starting container..."
+docker run --rm --name "$CONTAINER_NAME" -d -p 5001:8080 "$IMAGE_NAME" > /dev/null 2>&1
 sleep 5
 
-# Check for a 200 response from localhost:5001/
-echo "Checking for a 200 response from http://localhost:5001/..."
+echo "  checking http response..."
 if curl -s -o /dev/null -w "%{http_code}" http://localhost:5001/ | grep -q "200"; then
-  echo "Received 200 response - Container is running successfully."
+  echo "  [PASS] received 200 response"
+  SCORE=$((SCORE + 4))
 else
-  echo "Did not receive 200 response - There may be an issue with the container."
+  echo "  [FAIL] did not receive 200 response"
 fi
+echo ""
 
-# Stop and remove the container after the check
-echo "Stopping and removing container $CONTAINER_NAME..."
-docker stop "$CONTAINER_NAME"
+# ---- cleanup ----
+
+echo "cleaning up..."
+docker stop "$CONTAINER_NAME" > /dev/null 2>&1
 docker rm "$CONTAINER_NAME" > /dev/null 2>&1
 
-# Clean up the entire code repository
-echo "Removing entire repository: $REPO_DIR"
-cd "$BASE_DIR" || exit  # Return to the base directory before deletion
-rm -rf "$REPO_DIR"
+echo ""
+echo "========================================="
+echo "  final score: $SCORE/10"
+echo "========================================="
 
-# Confirm removal
-echo "Container has been stopped, removed, and repository has been deleted."
-
+if [ "$SCORE" -lt 10 ]; then
+  exit 1
+fi

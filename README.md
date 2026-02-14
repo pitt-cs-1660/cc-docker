@@ -1,46 +1,92 @@
 # Docker Assignment
 
-This project is a simple Node.js application that serves a static HTML page with some links. The application code is located in the `app` directory.
-
-## Assignment
-Your task is to create a `Dockerfile` that builds and runs the Node.js application.
-
-### Dockerfile Requirements:
-1. The **base layer** should be based on the `node:20` image.
-2. The final image should only include:
-   - `app.js`
-   - `package.json`
-   - `views` directory 
-   These should be copied to `/usr/src/app` inside the container.
-3. The application should be started with the following **entrypoint**: `node ./app.js`.
-4. The container image should support both **amd64** and **arm64** architectures and be **pushed to Docker Hub**.
-
-### Grading Rubric:
-
-| Objectives                                                       | Points |
-|------------------------------------------------------------------|--------|
-| Final stage based on `node:20-alpine`                             | 2      |
-| Final image only includes `app.js`, `package.json`, and `views`   | 5      |
-| Entry point starts the app with `node app.js`                     | 2      |
-| Push multi-architecture image to Docker Hub                      | 3      |
-
----
+This project is a Go web application that generates random band names. The application code is located at the root of the repository.
 
 ## Pre-requisites
 
-Before you begin, ensure the following are installed:
+Before you begin, ensure the following are set up:
 
 - **Docker**: Download from [here](https://www.docker.com/products/docker-desktop).
-- **Docker Hub Account**: If you don’t have one, [create one](https://hub.docker.com/signup).
-   - Your Docker Hub repository name should match your Docker Hub username.
-- **Git**: Download from [here](https://git-scm.com/downloads).
-- **Web Browser**: Ensure you have a web browser installed for testing the application.
+- **Go** (optional, for local development): Download from [here](https://go.dev/dl/).
+- **AWS Account**: You should have an active AWS account with access to ECR.
+- **AWS ECR Repository**: Create a repository in AWS ECR to store your Docker image.
 
 ---
 
-## Dockerfile RUN Commands
+## Assignment
 
-To install dependencies for the Node.js application, the base image will handle installing the Node.js runtime. You only need to run the `npm install` command during the build process.
+Your task is to create a multi-stage `Dockerfile` that builds and runs the Go application. A GitHub Actions workflow is provided that will automatically build and push your Docker image to AWS ECR when you push to the `main` branch. You will need to complete the workflow and configure it with your AWS details.
+
+### Dockerfile Requirements:
+
+#### Build Stage
+1. Use `golang:1.23` as the base image.
+2. Copy `go.mod`, `main.go`, and the `templates` directory into the build stage.
+3. Compile the application into a static binary using `CGO_ENABLED=0`:
+   ```dockerfile
+   RUN CGO_ENABLED=0 go build -o <binary-name> .
+   ```
+   `CGO_ENABLED=0` disables CGo and produces a fully static binary with no external library dependencies. This is required because the final stage (`scratch`) is an empty image with no C libraries.
+
+#### Final Stage
+4. Use `scratch` as the base image. This is a completely empty image - no shell, no OS, no libraries - resulting in the smallest possible container.
+5. Copy the compiled binary and `templates` directory from the build stage.
+6. Set a **CMD** or **ENTRYPOINT** that runs the compiled binary.
+
+### GitHub Actions Workflow:
+
+A workflow file is provided at `.github/workflows/deploy.yml`. You need to:
+
+1. **Set the environment variables** in the workflow file:
+   - `ACCOUNT_ID` - your AWS account ID
+   - `REGION` - your AWS region (e.g., `us-east-1`)
+   - `REPO_NAME` - your ECR repository name
+
+2. **Complete the final step** of the workflow with the correct `docker build`, `docker tag`, and `docker push` commands. Refer to [docs/docker-commands.md](docs/docker-commands.md) for guidance.
+
+3. **Set your AWS credentials as GitHub secrets** in your repository settings:
+   - `AWS_ACCESS_KEY_ID`
+   - `AWS_SECRET_ACCESS_KEY`
+
+   You should already be familiar with configuring GitHub secrets from the previous assignment using `${{ secrets }}`.
+
+4. **Create an ECR repository** in your AWS account to store your Docker image.
+
+When you push to the `main` branch, the workflow will build your image and push it to your ECR repository.
+
+### Automated Grading:
+
+A grading workflow runs automatically on every push to `main` and on pull requests. It checks your Dockerfile for the required multi-stage build structure and verifies that your container builds and runs correctly. You can check your score by going to the **Actions** tab in your GitHub repository and viewing the output of the **Grading** workflow.
+
+### Grading Rubric:
+
+#### Dockerfile (10 points)
+
+| Objectives                                                              | Points |
+|-------------------------------------------------------------------------|--------|
+| Multi-stage build                                                       | 1      |
+| Build stage uses `golang:1.23`                                          | 1      |
+| Final stage based on `scratch`                                           | 1      |
+| Image builds successfully                                               | 3      |
+| Container runs and serves HTTP 200                                      | 4      |
+
+#### AWS ECR (5 points)
+
+| Objectives                                                       | Points |
+|------------------------------------------------------------------|--------|
+| Image successfully pushed to ECR on push to main                 | 5      |
+
+---
+
+## Running Locally (without Docker)
+
+If you have Go installed, you can run the application directly:
+
+```bash
+go run main.go
+```
+
+Visit `http://localhost:8080` in your browser.
 
 ---
 
@@ -49,76 +95,52 @@ To install dependencies for the Node.js application, the base image will handle 
 To build the Docker image for your local machine, run the following command:
 
 ```bash
-# Build the image locally
-docker build -t [YOUR DOCKER HUB REPO]/cs1660-assignment2:v1 .
+# build the image locally
+docker build -t cs1660-assignment2:v1 .
 ```
 
 ---
 
 ## Testing the Image
 
-To test that your image works, run the container with the following command and visit `http://localhost:5000` in your browser to verify the application is running. If a web page renders, you're ready to submit the assignment. Assuming you have pushed your image to DockerHub.
+To test that your image works, run the container with the following command and visit `http://localhost:8080` in your browser to verify the application is running.
 
 ```bash
-docker run -p 5000:5000 -it --rm --name app [YOUR DOCKER HUB REPO]/cs1660-assignment2:v1
+docker run -p 8080:8080 -it --rm --name app cs1660-assignment2:v1
 ```
 
 ---
 
-## Building the Multi-Architecture Image
+## Running the Grading Script
 
-We need to support both `amd64` and `arm64` architectures by using Docker's `buildx` feature.
-
-### Enabling `buildx`:
-
-Run the following command to create a builder instance that supports both platforms:
+You can run the grading script locally to check your score before submitting. From the root of the project:
 
 ```bash
-# Create a builder instance with arm64 and amd64 platforms
-docker buildx create --use --platform=linux/arm64,linux/amd64 --name multi-platform-builder
-
-# verify your new buildx builder
-docker buildx ls
+./grade.sh .
 ```
 
-### Building and Pushing the Image:
+The script will check your Dockerfile structure, build the image, run the container, and output your score.
 
-To build and push the multi-architecture image to Docker Hub, run the following command:
-
-```bash
-# Build and push multi-architecture image to Docker Hub
-docker buildx build --push --platform linux/amd64,linux/arm64 -t [YOUR DOCKER HUB REPO]/cs1660-assignment2:v1 .
-```
+**Windows users:** PowerShell cannot run bash scripts. You will need to use [WSL (Windows Subsystem for Linux)](https://learn.microsoft.com/en-us/windows/wsl/install) to run the grading script.
 
 ---
 
 ## Submission Instructions
 
-1. **Merge your code** into the **main** branch of the GitHub project.
-2. **Create a Docker Hub repository** named `[your dockerhub username]/cs-1660-assignment2` following the [Docker Hub Quickstart](https://docs.docker.com/docker-hub/quickstart/).
-3. **Push your multi-architecture image** to the `[your dockerhub username]/cs-1660-assignment2` repository.
-4. **Submit your Docker Hub repository name** on Canvas. It should look like `[dockerhub username]/cs-1660-assignment2`.
-
----
-
-## Docker Login
-
-You will need to authenticate to DockerHub before you can push.
-
-Login to Docker Hub by running the following command in your terminal:
-
-```bash
-# Log in to Docker Hub (you will be prompted for your password)
-docker login --username=[DOCKER HUB LOGIN]
-```
-
-This will store your credentials in `~/.docker/config.json`.
+1. **Set the environment variables** in `.github/workflows/deploy.yml` with your AWS account ID, region, and ECR repository name.
+2. **Complete the final workflow step** with your `docker build`, `docker tag`, and `docker push` commands.
+3. **Ensure your AWS credentials** are configured as GitHub secrets in your repository.
+4. **Merge your code** into the **main** branch of the GitHub project.
+5. **Verify** that the GitHub Actions workflow has successfully pushed the image to your ECR repository.
+6. **Submit GitHub Repo URL** on Canvas.
 
 ---
 
 ## Resources
 
 - [Dockerfile reference](https://docs.docker.com/reference/dockerfile/)
-- [Docker Buildx Create](https://docs.docker.com/engine/reference/commandline/buildx_create/)
-- [Docker Buildx Build](https://docs.docker.com/engine/reference/commandline/buildx_build/)
-- [Docker CLI reference](https://docs.docker.com/reference/cli/docker/)
+- [Docker Commands Reference](docs/docker-commands.md)
+- [Docker Multi-stage Builds](https://docs.docker.com/build/building/multi-stage/)
+- [Amazon ECR User Guide](https://docs.aws.amazon.com/AmazonECR/latest/userguide/what-is-ecr.html)
+- [GitHub Actions Documentation](https://docs.github.com/en/actions)
+- [aws-actions/amazon-ecr-login](https://github.com/aws-actions/amazon-ecr-login)
